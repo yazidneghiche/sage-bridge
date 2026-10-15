@@ -1,0 +1,19 @@
+{
+  "orderNumber": "TEST-001",
+  "customerCode": "TEST",
+  "documentType": "BC",
+  "orderDate": "2026-02-28",
+  "reference": "Commande test bridge",
+  "lines": [
+    {
+      "itemCode": '10017-1',
+      "quantity": 2,
+      "unitPrice": 10.50
+    },
+    {
+      "itemCode": '10102-3',
+      "quantity": 1,
+      "unitPrice": 25.00
+    }
+  ]
+}

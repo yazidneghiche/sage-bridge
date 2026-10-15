@@ -1,0 +1,12 @@
+{
+  "InboxDir": "C:\\wamp32\\www\\sage-bridge\\accounts\\inbox",
+  "ProcessingDir": "C:\\wamp32\\www\\sage-bridge\\accounts\\processing",
+  "DoneDir": "C:\\wamp32\\www\\sage-bridge\\accounts\\done",
+  "ErrorDir": "C:\\wamp32\\www\\sage-bridge\\accounts\\error",
+  "ResultsDir": "C:\\wamp32\\www\\sage-bridge\\accounts\\results",
+  "LogFile": "C:\\wamp32\\www\\sage-bridge\\accounts\\logs\\bridge-account.log",
+  "GcmPath": "CHEMIN_VERS_LA_SOCIETE_GCM",
+  "SageUser": "UTILISATEUR_SAGE",
+  "SagePassword": "MOT_DE_PASSE_SAGE",
+  "PollMs": 1000
+}

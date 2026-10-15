@@ -1,0 +1,15 @@
+{
+  "InboxDir": "C:\\wamp32\\www\\sage-bridge\\inbox",
+  "ProcessingDir": "C:\\wamp32\\www\\sage-bridge\\processing",
+  "DoneDir": "C:\\wamp32\\www\\sage-bridge\\done",
+  "ErrorDir": "C:\\wamp32\\www\\sage-bridge\\error",
+  "ResultsDir": "C:\\wamp32\\www\\sage-bridge\\results",
+  "LogFile": "C:\\wamp32\\www\\sage-bridge\\logs\\bridge.log",
+
+  "GcmPathold": "C:\\wamp32\\www\\LA MAISON DES COSMETIQUES.gcm",
+  "GcmPath": "D:\\SAGE_SLA\\Sociétés\\LA MAISON DES COSMETIQUES.gcm",
+  "SageUser": "Etienne",
+  "SagePassword": "Lmdc@2675",
+
+  "PollMs": 1000
+}
