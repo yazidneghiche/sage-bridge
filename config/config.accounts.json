@@ -5,8 +5,10 @@
   "ErrorDir": "C:\\wamp32\\www\\sage-bridge\\accounts\\error",
   "ResultsDir": "C:\\wamp32\\www\\sage-bridge\\accounts\\results",
   "LogFile": "C:\\wamp32\\www\\sage-bridge\\accounts\\logs\\bridge-account.log",
-  "GcmPath": "CHEMIN_VERS_LA_SOCIETE_GCM",
-  "SageUser": "UTILISATEUR_SAGE",
-  "SagePassword": "MOT_DE_PASSE_SAGE",
+  "GcmPathold": "C:\\wamp32\\www\\LA MAISON DES COSMETIQUES.gcm",
+  "GcmPath": "D:\\SAGE_SLA\\Sociétés\\LA MAISON DES COSMETIQUES.gcm",
+  "SageUser": "Etienne",
+  "SagePassword": "Lmdc@2675",
+
   "PollMs": 1000
 }

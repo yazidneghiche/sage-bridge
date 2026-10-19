@@ -1,0 +1,18 @@
+{
+  "accountId": 990019,
+  "customerCode": "TST990019tmp",
+  "name": "TEST YAZID - NE PAS UTILISER",
+  "firstname": "Yazid",
+  "lastname": "Neghiche",
+  "email": "yazid.neghiche1977@gmail.com",
+  "phone": "",
+  "address": "1 rue du Test",
+  "addressComplement": "",
+  "zipCode": "54000",
+  "city": "Nancy",
+  "country": "France",
+  "tariffCategory": "",
+  "source": "test",
+  "platform": "integration",
+  "description": "TEST integration - compte tmp"
+}
