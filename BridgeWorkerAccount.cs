@@ -347,159 +347,182 @@ class Program
         }
     }
 
-    static string CreateAccountInSage(
-        BridgeConfig cfg,
-        AccountRequest req,
-        AccountResult result
-    )
-    {
-        dynamic stream = null;
-        dynamic client = null;
-        dynamic cpta = null;
-        dynamic factory = null;
+	 static string CreateAccountInSage(
+		BridgeConfig cfg,
+		AccountRequest req,
+		AccountResult result
+	)
+	{
+				dynamic stream = null;
+				dynamic client = null;
+				dynamic cpta = null;
+				dynamic factory = null;
 
-        try
-        {
-            result.stage = "ouverture_sage";
-            var type = Type.GetTypeFromProgID(
-                "Objets100c.Cial.Stream",
-                true
-            );
+				try
+				{
+					result.stage = "ouverture_sage";
+					var type = Type.GetTypeFromProgID(
+						"Objets100c.Cial.Stream",
+						true
+					);
 
-            stream = Activator.CreateInstance(type);
-            stream.Name = cfg.GcmPath;
-            stream.Loggable.UserName = cfg.SageUser;
-            stream.Loggable.UserPwd = cfg.SagePassword;
-            stream.Open();
+					stream = Activator.CreateInstance(type);
+					stream.Name = cfg.GcmPath;
+					stream.Loggable.UserName = cfg.SageUser;
+					stream.Loggable.UserPwd = cfg.SagePassword;
+					stream.Open();
 
-            cpta = stream.CptaApplication;
-            factory = cpta.FactoryClient;
+					cpta = stream.CptaApplication;
+					factory = cpta.FactoryClient;
 
-            result.stage = "recherche_client";
-            // Une erreur Sage doit remonter, pas être prise pour un compte absent.
-            if ((bool)factory.ExistNumero(req.customerCode))
-            {
-                client = factory.ReadNumero(req.customerCode);
-                string existingCode = client.CT_Num;
-                string existingEmail = Convert.ToString(client.CT_EMail);
-                if (!string.Equals((existingEmail ?? "").Trim(), req.email, StringComparison.OrdinalIgnoreCase))
-                    throw new Exception("Ce numéro client existe avec un autre email. Aucune modification effectuée.");
+					result.stage = "recherche_client";
+					// Une erreur Sage doit remonter, pas être prise pour un compte absent.
+					if ((bool)factory.ExistNumero(req.customerCode))
+					{
+						client = factory.ReadNumero(req.customerCode);
+						string existingCode = client.CT_Num;
 
-                result.created = false;
-                result.alreadyExists = true;
-                Log(cfg, "Compte déjà présent dans Sage: " + SafeLog(existingCode));
-                return existingCode;
-            }
+						// correction : accès à l'email via Telecom.
+						string existingEmail = Convert.ToString(client.Telecom.EMail);
 
-            result.stage = "creation_client";
-            client = factory.Create();
-            client.CT_Num = req.customerCode;
-            client.CT_Intitule = req.name;
+						if (!string.Equals(
+							(existingEmail ?? "").Trim(),
+							req.email,
+							StringComparison.OrdinalIgnoreCase
+						))
+							throw new Exception(
+								"Ce numéro client existe avec un autre email. Aucune modification effectuée."
+							);
 
-            // nouvel ajout : contact principal, prénom puis nom.
-            string contact = ((req.firstname ?? "") + " " + (req.lastname ?? "")).Trim();
-            if (!string.IsNullOrWhiteSpace(contact))
-            {
-                result.stage = "champ_CT_Contact";
-                client.CT_Contact = contact;
-            }
+						result.created = false;
+						result.alreadyExists = true;
+						Log(cfg, "Compte déjà présent dans Sage: " + SafeLog(existingCode));
+						return existingCode;
+					}
 
-            if (!string.IsNullOrWhiteSpace(req.email))
-            {
-                result.stage = "champ_CT_EMail";
-                client.CT_EMail = req.email;
-            }
+					result.stage = "creation_client";
+					client = factory.Create();
+					client.CT_Num = req.customerCode;
+					client.CT_Intitule = req.name;
 
-            if (!string.IsNullOrWhiteSpace(req.phone))
-            {
-                result.stage = "champ_CT_Telephone";
-                client.CT_Telephone = req.phone;
-            }
+					// nouvel ajout : contact principal, prénom puis nom.
+					string contact = ((req.firstname ?? "") + " " + (req.lastname ?? "")).Trim();
+					if (!string.IsNullOrWhiteSpace(contact))
+					{
+						result.stage = "champ_CT_Contact";
+						client.CT_Contact = contact;
+					}
 
-            if (!string.IsNullOrWhiteSpace(req.address))
-            {
-                result.stage = "champ_CT_Adresse";
-                client.CT_Adresse = req.address;
-            }
+					if (!string.IsNullOrWhiteSpace(req.email))
+					{
+						result.stage = "champ_CT_EMail";
+						// correction
+						client.Telecom.EMail = req.email;
+					}
 
-            if (!string.IsNullOrWhiteSpace(req.addressComplement))
-            {
-                result.stage = "champ_CT_Complement";
-                client.CT_Complement = req.addressComplement;
-            }
+					if (!string.IsNullOrWhiteSpace(req.phone))
+					{
+						result.stage = "champ_CT_Telephone";
+						// correction
+						client.Telecom.Telephone = req.phone;
+					}
 
-            if (!string.IsNullOrWhiteSpace(req.zipCode))
-            {
-                result.stage = "champ_CT_CodePostal";
-                client.CT_CodePostal = req.zipCode;
-            }
+					if (!string.IsNullOrWhiteSpace(req.address))
+					{
+						result.stage = "champ_CT_Adresse";
+						// correction
+						client.Adresse.Adresse = req.address;
+					}
 
-            if (!string.IsNullOrWhiteSpace(req.city))
-            {
-                result.stage = "champ_CT_Ville";
-                client.CT_Ville = req.city;
-            }
+					if (!string.IsNullOrWhiteSpace(req.addressComplement))
+					{
+						result.stage = "champ_CT_Complement";
+						// correction
+						client.Adresse.Complement = req.addressComplement;
+					}
 
-            if (!string.IsNullOrWhiteSpace(req.country))
-            {
-                result.stage = "champ_CT_Pays";
-                client.CT_Pays = req.country;
-            }
+					if (!string.IsNullOrWhiteSpace(req.zipCode))
+					{
+						result.stage = "champ_CT_CodePostal";
+						// correction
+						client.Adresse.CodePostal = req.zipCode;
+					}
 
-            if (!string.IsNullOrWhiteSpace(req.description))
-            {
-                result.stage = "champ_CT_Commentaire";
-                client.CT_Commentaire = req.description;
-            }
+					if (!string.IsNullOrWhiteSpace(req.city))
+					{
+						result.stage = "champ_CT_Ville";
+						// correction
+						client.Adresse.Ville = req.city;
+					}
 
-            // tariffCategory sera configuré après validation du mapping Sage.
-            result.stage = "ecriture_client";
-            client.Write();
-            result.created = true;
+					if (!string.IsNullOrWhiteSpace(req.country))
+					{
+						result.stage = "champ_CT_Pays";
+						// correction
+						client.Adresse.Pays = req.country;
+					}
 
-            string ctNum = client.CT_Num;
+					if (!string.IsNullOrWhiteSpace(req.description))
+					{
+						result.stage = "champ_CT_Commentaire";
+						client.CT_Commentaire = req.description;
+					}
 
-            Log(
-                cfg,
-                "Compte créé: "
-                + ctNum
-                + " | source="
-                + (req.source ?? "")
-                + " | platform="
-                + (req.platform ?? "")
-            );
+					// tariffCategory sera configuré après validation du mapping Sage.
 
-            return ctNum;
-        }
-        finally
-        {
-            try
-            {
-                if (client != null)
-                    System.Runtime.InteropServices.Marshal
-                        .FinalReleaseComObject(client);
-            }
-            catch { }
+					// correction : appliquer les valeurs par défaut de Sage.
+					result.stage = "initialisation_client";
+					client.SetDefault();
 
-            ReleaseCom(factory);
-            ReleaseCom(cpta);
+					result.stage = "ecriture_client";
+					client.Write();
 
-            try
-            {
-                if (stream != null)
-                    stream.Close();
-            }
-            catch { }
+					result.created = true;
 
-            try
-            {
-                if (stream != null)
-                    System.Runtime.InteropServices.Marshal
-                        .FinalReleaseComObject(stream);
-            }
-            catch { }
-        }
-    }
+					string ctNum = client.CT_Num;
+
+					Log(
+						cfg,
+						"Compte créé: "
+						+ ctNum
+						+ " | source="
+						+ (req.source ?? "")
+						+ " | platform="
+						+ (req.platform ?? "")
+					);
+
+					return ctNum;
+				}
+				finally
+				{
+					try
+					{
+						if (client != null)
+							System.Runtime.InteropServices.Marshal
+								.FinalReleaseComObject(client);
+					}
+					catch { }
+
+					ReleaseCom(factory);
+					ReleaseCom(cpta);
+
+					try
+					{
+						if (stream != null)
+							stream.Close();
+					}
+					catch { }
+
+					try
+					{
+						if (stream != null)
+							System.Runtime.InteropServices.Marshal
+								.FinalReleaseComObject(stream);
+					}
+					catch { }
+				}
+	}
+
     static void ReleaseCom(object value)
     {
         try
