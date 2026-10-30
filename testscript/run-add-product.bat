@@ -11,9 +11,9 @@ if not exist "%~dp0config\config.json" (
     pause
     exit /b 1
 )
-set "ORDER_PIECE="
-set "ARTICLE_REF="
-set "ARTICLE_QTY="
+set "ORDER_PIECE=BC159602"
+set "ARTICLE_REF=10102-3"
+set "ARTICLE_QTY=1"
 set /p "ORDER_PIECE=Numero de commande Sage (exemple BC159602) : "
 set /p "ARTICLE_REF=Reference article a ajouter : "
 set /p "ARTICLE_QTY=Quantite a ajouter : "
