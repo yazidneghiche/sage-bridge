@@ -44,6 +44,12 @@ class TransformDevis
             Console.WriteLine("Devis : " + devis.DO_Piece
                 + " | lignes : " + devis.FactoryDocumentLigne.List.Count);
 
+            // Meme preparation que le bridge pour un devis destine a devenir une commande.
+            Console.WriteLine("Statut avant preparation : " + devis.DO_Statut);
+            devis.DO_Statut = 2;
+            devis.Write();
+            Console.WriteLine("Statut enregistre : " + devis.DO_Statut);
+
             // Un seul processus pour le devis entier, sans ajout de lignes ni création directe de BC.
             process = stream.Transformation.Vente.CreateProcess_Commander();
             process.AddDocument(devis);
