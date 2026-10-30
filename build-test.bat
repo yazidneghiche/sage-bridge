@@ -7,11 +7,12 @@ if not exist "%COMPILER%" (
     pause
     exit /b 1
 )
-"%COMPILER%" /nologo /platform:x86 /r:System.Web.Extensions.dll /r:Microsoft.CSharp.dll /out:"%~dp0TransformDevis.exe" "%~dp0TransformDevis.cs"
+if not exist "%~dp0bin" mkdir "%~dp0bin"
+"%COMPILER%" /nologo /platform:x86 /r:System.Web.Extensions.dll /r:Microsoft.CSharp.dll /out:"%~dp0bin\TransformDevis.exe" "%~dp0TransformDevis.cs"
 if errorlevel 1 (
     echo Echec de compilation.
     pause
     exit /b 1
 )
-echo Compilation terminee : TransformDevis.exe
+echo Compilation terminee : bin\TransformDevis.exe
 pause
