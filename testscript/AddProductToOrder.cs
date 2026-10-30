@@ -48,7 +48,7 @@ class AddProductToOrder
                 throw new Exception("Le document lu n'est pas du type commande COM attendu.");
             string piece = order.DO_Piece;
             int before = order.FactoryDocumentLigne.List.Count;
-            Console.WriteLine("Commande : " + piece + " | client : " + order.DO_Tiers
+            Console.WriteLine("Commande : " + piece
                 + " | type COM : " + order.DO_Type + " | lignes avant : " + before);
             article = stream.FactoryArticle.ReadReference(args[2]);
             line = order.FactoryDocumentLigne.Create();
