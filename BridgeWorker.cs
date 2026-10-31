@@ -303,19 +303,12 @@ class Program
                     article = stream.FactoryArticle.ReadReference(line.reference);
                     lig = doc.FactoryDocumentLigne.Create();
                     lig.SetDefaultArticle(article, (double)line.quantity);
-                    Log(cfg, "Article " + line.reference
-                        + " | quantité JSON=" + line.quantity.ToString(CultureInfo.InvariantCulture)
-                        + " | PU HT JSON=" + (line.unitPrice.HasValue
-                            ? line.unitPrice.Value.ToString(CultureInfo.InvariantCulture) : "absent")
-                        + " | PU HT initial Sage=" + Convert.ToString(lig.DL_PrixUnitaire, CultureInfo.InvariantCulture));
-
-                    if (line.unitPrice.HasValue)
-                        lig.DL_PrixUnitaire = (double)line.unitPrice.Value;
+                    // Reprendre le test isole valide : initialisation et prix calcules par Sage.
+                    // Les prix JSON seront appliques apres la creation du document cible.
+                    Log(cfg, "Ajout en cours : " + line.reference
+                        + " | quantite=" + line.quantity.ToString(CultureInfo.InvariantCulture));
                     lig.Write();
-
-                    Log(cfg, "Ligne écrite " + line.reference
-                        + " | PU HT=" + Convert.ToString(lig.DL_PrixUnitaire, CultureInfo.InvariantCulture)
-                        + " | PU TTC=" + Convert.ToString(lig.DL_PUTTC, CultureInfo.InvariantCulture));
+                    Log(cfg, "Ajout enregistre : " + line.reference);
                 }
                 finally
                 {
@@ -328,7 +321,12 @@ class Program
                 + " | lignes=" + doc.FactoryDocumentLigne.List.Count);
 
             if (requestedType == 0)
+            {
+                ReleaseCom((object)doc);
+                doc = null;
+                ApplyRequestedPrices(cfg, (object)stream, piece, 0, req.lines);
                 return piece;
+            }
 
             // Meme parcours que le test valide : relire dans la connexion encore ouverte.
             ReleaseCom((object)doc);
@@ -340,6 +338,7 @@ class Program
             currentComType = nextComType;
             result.lastSageDocumentNumber = piece;
             result.lastSageDocumentType = 1;
+            ApplyRequestedPrices(cfg, (object)stream, piece, currentComType, req.lines);
             if (requestedType == 1)
                 return piece;
 
@@ -363,6 +362,128 @@ class Program
             ReleaseCom((object)stream);
         }
 
+    }
+
+    static string PriceLineKey(string reference, decimal quantity)
+    {
+        return reference.Trim().ToUpperInvariant() + "|"
+            + quantity.ToString("0.############################", CultureInfo.InvariantCulture);
+    }
+
+    static void ApplyRequestedPrices(BridgeConfig cfg, object streamObject,
+        string piece, object typeCom, List<OrderLine> requestedLines)
+    {
+        bool hasPrices = false;
+        foreach (var requested in requestedLines)
+            if (requested.unitPrice.HasValue) hasPrices = true;
+        if (!hasPrices) return;
+
+        dynamic stream = streamObject;
+        dynamic document = null;
+        var heldLines = new List<object>();
+        var targets = new List<OrderLine>();
+        bool originalAutoPrice = false;
+        bool autoPriceChanged = false;
+        try
+        {
+            document = stream.FactoryDocumentVente.ReadPiece(typeCom, piece);
+            // Associer par article et quantite, sans supposer l'ordre des lignes Sage.
+            var groups = new Dictionary<string, List<OrderLine>>();
+            foreach (var requested in requestedLines)
+            {
+                string key = PriceLineKey(requested.reference, requested.quantity);
+                if (!groups.ContainsKey(key)) groups.Add(key, new List<OrderLine>());
+                foreach (var other in groups[key])
+                    if (other.unitPrice != requested.unitPrice)
+                        throw new Exception("Prix ambigus pour un meme article et une meme quantite : "
+                            + requested.reference + ". Aucun prix modifie ; controler " + piece);
+                groups[key].Add(requested);
+            }
+
+            // Verifier toutes les correspondances avant la premiere modification.
+            for (int i = 1; i <= document.FactoryDocumentLigne.List.Count; i++)
+            {
+                dynamic line = null, article = null;
+                try
+                {
+                    line = document.FactoryDocumentLigne.List(i);
+                    article = line.Article;
+                    if (article == null) continue;
+                    string reference = article.AR_Ref;
+                    string key = PriceLineKey(reference, Convert.ToDecimal(line.DL_Qte));
+                    if (!groups.ContainsKey(key) || groups[key].Count == 0)
+                        throw new Exception("Ligne Sage sans correspondance JSON : " + reference
+                            + ". Aucun prix modifie ; controler " + piece);
+                    OrderLine requested = groups[key][0];
+                    groups[key].RemoveAt(0);
+                    heldLines.Add((object)line);
+                    targets.Add(requested);
+                    line = null;
+                }
+                finally { ReleaseCom((object)article); ReleaseCom((object)line); }
+            }
+            foreach (var group in groups.Values)
+                if (group.Count != 0)
+                    throw new Exception("Lignes JSON non retrouvees dans " + piece
+                        + ". Aucun prix modifie.");
+
+            originalAutoPrice = stream.FactoryDocumentLigne.AutoSet_PrixLigne;
+            stream.FactoryDocumentLigne.AutoSet_PrixLigne = true;
+            autoPriceChanged = true;
+            for (int i = 0; i < heldLines.Count; i++)
+            {
+                if (!targets[i].unitPrice.HasValue) continue;
+                dynamic line = heldLines[i];
+                line.DL_PrixUnitaire = (double)targets[i].unitPrice.Value;
+                line.Write();
+                Log(cfg, "Prix applique sur " + piece + " | " + targets[i].reference
+                    + " | PU HT=" + targets[i].unitPrice.Value.ToString(CultureInfo.InvariantCulture));
+            }
+            document.RecalculTotaux(true);
+            foreach (object line in heldLines) ReleaseCom(line);
+            heldLines.Clear();
+            ReleaseCom((object)document);
+            document = null;
+            document = stream.FactoryDocumentVente.ReadPiece(typeCom, piece);
+
+            var expectedPrices = new Dictionary<string, decimal>();
+            foreach (var requested in requestedLines)
+                if (requested.unitPrice.HasValue)
+                    expectedPrices[PriceLineKey(requested.reference, requested.quantity)] = requested.unitPrice.Value;
+            int checkedPrices = 0;
+            int expectedChecks = 0;
+            foreach (var requested in requestedLines)
+                if (requested.unitPrice.HasValue) expectedChecks++;
+            for (int i = 1; i <= document.FactoryDocumentLigne.List.Count; i++)
+            {
+                dynamic line = null, article = null;
+                try
+                {
+                    line = document.FactoryDocumentLigne.List(i);
+                    article = line.Article;
+                    if (article == null) continue;
+                    string reference = article.AR_Ref;
+                    string key = PriceLineKey(reference, Convert.ToDecimal(line.DL_Qte));
+                    if (!expectedPrices.ContainsKey(key)) continue;
+                    decimal actual = Convert.ToDecimal(line.DL_PrixUnitaire);
+                    if (Math.Abs(actual - expectedPrices[key]) > 0.0001m)
+                        throw new Exception("Prix non conserve sur " + piece + " / " + reference
+                            + " : attendu " + expectedPrices[key] + ", relu " + actual);
+                    checkedPrices++;
+                }
+                finally { ReleaseCom((object)article); ReleaseCom((object)line); }
+            }
+            if (checkedPrices != expectedChecks)
+                throw new Exception("Nombre de prix verifies inattendu sur " + piece);
+            Log(cfg, "Prix verifies apres relecture : " + piece + " | lignes=" + checkedPrices);
+        }
+        finally
+        {
+            foreach (object line in heldLines) ReleaseCom(line);
+            ReleaseCom((object)document);
+            if (autoPriceChanged)
+                stream.FactoryDocumentLigne.AutoSet_PrixLigne = originalAutoPrice;
+        }
     }
 
     static string TransformDocumentInSage(
